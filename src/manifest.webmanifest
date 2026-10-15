@@ -1,0 +1,65 @@
+{
+  "name": "ITECOM E-learning",
+  "short_name": "ITECOM",
+  "description": "Cours, devoirs et classes virtuelles ITECOM — cours téléchargés disponibles sans connexion.",
+  "lang": "fr",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#e9eaed",
+  "theme_color": "#2b3ea8",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/dashboard",
+  "shortcuts": [
+    {
+      "name": "Mes cours",
+      "short_name": "Cours",
+      "url": "/courses/my-learning",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mes devoirs",
+      "short_name": "Devoirs",
+      "url": "/qcm",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ma scolarité",
+      "short_name": "Scolarité",
+      "url": "/scolarite",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "/api": {
+    "target": "https://itecom-groupe-production.up.railway.app",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/uploads": {
+    "target": "https://itecom-groupe-production.up.railway.app",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

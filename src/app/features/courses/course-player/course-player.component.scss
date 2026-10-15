@@ -1,0 +1,99 @@
+.player-layout {
+  display: flex;
+  height: calc(100vh - var(--navbar-height) - 40px);
+}
+
+.lessons-panel {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  background: #1e293b;
+  border-radius: 12px 0 0 12px;
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 12px;
+
+  .lessons-panel + & {
+    border-radius: 0 12px 12px 0;
+  }
+}
+
+.lesson-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, .05);
+  }
+
+  &.active {
+    background: rgba(43, 62, 168, .2);
+    border-left-color: #2b3ea8;
+  }
+
+  &.completed {
+    opacity: 0.7;
+  }
+}
+
+.video-container {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.reading-pad {
+  padding: 2rem 2.5rem;
+
+  @media (max-width: 991px) {
+    padding: 1.25rem 1.25rem;
+  }
+}
+
+.video-placeholder {
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .player-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .lessons-panel {
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 300px;
+  }
+
+  .content-area {
+    border-radius: 0 0 12px 12px;
+  }
+}
+
+
+// ── Téléphone : lecteur pleine largeur, barre du haut sur deux lignes, gros boutons ──
+@media (max-width: 767.98px) {
+  .player-top { flex-wrap: wrap; row-gap: .5rem; }
+  .player-title { flex: 1 1 100%; order: -1; font-size: 1.05rem; white-space: normal; }
+  .player-progress { flex: 1 1 auto; }
+  .player-progress .progress-custom { flex: 1 1 auto; width: auto !important; }
+  .lesson-head { flex-direction: column; gap: .75rem; }
+  .lesson-head > .btn, .lesson-head > .badge, .lesson-head > .lesson-watch { width: 100%; min-height: 44px; font-size: .95rem; display: inline-flex; align-items: center; justify-content: center; }
+  .content-area.reading-pad { padding: 1rem .75rem; overflow-x: hidden; }
+  .video-container { border-radius: 12px; }
+  .video-container video { max-height: none !important; }
+  .quality-bar .btn-group { flex-wrap: wrap; }
+}

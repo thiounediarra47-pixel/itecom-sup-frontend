@@ -1,0 +1,8 @@
+node_modules
+
+# Fichiers générés par Angular (reconstruits par le Dockerfile)
+dist/
+.angular/
+
+# Système
+.DS_Store

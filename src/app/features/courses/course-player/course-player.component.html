@@ -1,0 +1,308 @@
+<div class="fade-in-up">
+  <!-- Top bar -->
+  <div class="player-top d-flex align-items-center gap-3 mb-3">
+    <a [routerLink]="['/courses', courseId]" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <div class="player-title fw-bold text-truncate flex-grow-1">{{ course?.title }}</div>
+    <div class="player-progress d-flex align-items-center gap-2">
+      <div class="progress-custom" style="width:120px">
+        <div class="progress-bar" [style.width.%]="overallProgress"></div>
+      </div>
+      <span class="small text-muted fw-semibold">{{ overallProgress | number:'1.0-0' }}%</span>
+    </div>
+    <!-- Hors connexion : télécharger le cours sur l'appareil -->
+    <ng-container *ngIf="course && offline.supported">
+      <span *ngIf="downloadProgress !== null" class="small text-muted text-nowrap">
+        <span class="spinner-border spinner-border-sm me-1"></span>Téléchargement {{ downloadProgress }} %
+      </span>
+      <button *ngIf="downloadProgress === null && !isDownloaded" type="button" class="btn btn-sm btn-outline-primary text-nowrap"
+              [disabled]="!(offline.online$ | async)" (click)="downloadForOffline()"
+              title="Enregistrer le cours (vidéos légères et documents) pour le suivre sans internet">
+        <i class="bi bi-cloud-arrow-down me-1"></i>Télécharger pour hors connexion
+      </button>
+      <span *ngIf="downloadProgress === null && isDownloaded" class="d-flex align-items-center gap-1 text-nowrap">
+        <span class="badge bg-success-subtle text-success-emphasis border"><i class="bi bi-check2-circle me-1"></i>Disponible hors connexion</span>
+        <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1" (click)="removeOffline()" title="Retirer de l'appareil">
+          <i class="bi bi-trash3"></i></button>
+      </span>
+    </ng-container>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="d-flex gap-2 mb-3">
+    <button class="btn btn-sm fw-semibold"
+            [class.btn-primary-custom]="activeTab === 'cours'"
+            [class.btn-outline-secondary]="activeTab !== 'cours'"
+            (click)="activeTab = 'cours'">
+      <i class="bi bi-play-circle me-1"></i>Cours
+    </button>
+    <button class="btn btn-sm fw-semibold"
+            [class.btn-warning]="activeTab === 'pratique'"
+            [class.btn-outline-secondary]="activeTab !== 'pratique'"
+            (click)="activeTab = 'pratique'">
+      <i class="bi bi-trophy me-1"></i>Pratique
+      <span *ngIf="exerciseLessons.length > 0" class="badge bg-white text-dark ms-1" style="font-size:.65rem">{{ exerciseLessons.length }}</span>
+    </button>
+    <button *ngIf="activeTab === 'cours'" class="btn btn-sm btn-outline-secondary ms-auto" (click)="sidebarOpen = !sidebarOpen">
+      <i class="bi" [class.bi-layout-sidebar]="!sidebarOpen" [class.bi-layout-sidebar-inset]="sidebarOpen"></i>
+      {{ sidebarOpen ? 'Masquer le programme' : 'Afficher le programme' }}
+    </button>
+  </div>
+
+  <!-- PRATIQUE TAB: exercise cards -->
+  <div *ngIf="activeTab === 'pratique'" class="row g-3">
+    <div *ngIf="exerciseLessons.length === 0" class="col-12 text-center py-5 text-muted">
+      <div style="font-size:3rem">🏋️</div>
+      <p class="mt-2">Aucun exercice pratique dans ce cours.</p>
+    </div>
+    <div *ngFor="let ex of exerciseLessons" class="col-md-6 col-xl-4">
+      <div class="card border-0 shadow-sm h-100"
+           [ngStyle]="{'border-radius':'14px','border-left':'4px solid ' + exerciseColor(ex)}">
+        <div class="card-body p-4 d-flex flex-column">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="rounded-circle d-flex align-items-center justify-content-center text-white"
+                  [style.background]="exerciseColor(ex)"
+                  style="width:36px;height:36px;flex-shrink:0">
+              <i [class.bi-table]="ex.type === 'EXCEL_EXERCISE'"
+                 [class.bi-code-slash]="ex.type === 'CODE_EXERCISE'"
+                 [class.bi-file-pdf]="ex.type === 'PDF'"
+                 [class.bi-play-circle]="ex.type === 'VIDEO'"
+                 [class.bi-question-circle]="ex.type === 'QUIZ'"></i>
+            </span>
+            <span class="badge rounded-pill text-white small" [style.background]="exerciseColor(ex)">
+              {{ exerciseLabel(ex) }}
+            </span>
+            <span *ngIf="ex.completed" class="badge bg-success ms-auto"><i class="bi bi-check-lg"></i> Fait</span>
+          </div>
+          <h6 class="fw-bold mb-2 flex-grow-1">{{ ex.title }}</h6>
+          <p *ngIf="ex.description" class="text-muted small mb-3" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+            {{ ex.description }}
+          </p>
+          <div class="d-flex align-items-center gap-2 mt-auto">
+            <span *ngIf="ex.duration" class="text-muted small"><i class="bi bi-clock me-1"></i>{{ ex.duration }}min</span>
+            <a *ngIf="ex.type === 'EXCEL_EXERCISE'"
+               [routerLink]="['/spreadsheet']" [queryParams]="{ lessonId: ex.id }"
+               class="btn btn-sm ms-auto"
+               style="background:#0ea5e9;color:white">
+              <i class="bi bi-table me-1"></i>Ouvrir le tableur
+            </a>
+            <a *ngIf="ex.type === 'CODE_EXERCISE'"
+               [routerLink]="['/ide']" [queryParams]="{ lessonId: ex.id }"
+               class="btn btn-sm btn-primary ms-auto">
+              <i class="bi bi-code-slash me-1"></i>Ouvrir l'IDE
+            </a>
+            <button *ngIf="ex.type !== 'EXCEL_EXERCISE' && ex.type !== 'CODE_EXERCISE'"
+                    class="btn btn-sm ms-auto" style="background:#2b3ea8;color:white"
+                    (click)="openExerciseInCourse(ex)">
+              <i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir l'exercice
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="player-layout" *ngIf="activeTab === 'cours'">
+    <!-- Lessons sidebar -->
+    <div class="lessons-panel" *ngIf="sidebarOpen">
+      <div class="p-3 border-bottom border-secondary">
+        <div class="text-white fw-semibold small">📋 Programme</div>
+        <div class="text-secondary" style="font-size:.75rem">{{ completedCount }}/{{ course?.lessons?.length || 0 }} leçons</div>
+      </div>
+      <div *ngFor="let lesson of course?.lessons; let i = index"
+           class="lesson-item"
+           [class.active]="currentLesson?.id === lesson.id"
+           [class.completed]="lesson.completed"
+           (click)="selectLesson(lesson)">
+        <div class="d-flex align-items-center gap-2">
+          <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+               [class.bg-success]="lesson.completed"
+               [class.bg-secondary]="!lesson.completed && currentLesson?.id !== lesson.id"
+               [class.bg-primary]="currentLesson?.id === lesson.id"
+               style="width:24px;height:24px;font-size:0.65rem;color:white">
+            <i *ngIf="lesson.completed" class="bi bi-check-lg"></i>
+            <span *ngIf="!lesson.completed">{{ i+1 }}</span>
+          </div>
+          <div class="overflow-hidden">
+            <div class="text-white small fw-semibold text-truncate">{{ lesson.title }}</div>
+            <div class="text-secondary d-flex gap-2" style="font-size:.7rem">
+              <span>
+                <i [class.bi-play-circle]="lesson.type === 'VIDEO'"
+                   [class.bi-file-pdf]="lesson.type === 'PDF'"
+                   [class.bi-code-slash]="lesson.type === 'CODE_EXERCISE'"
+                   [class.bi-table]="lesson.type === 'EXCEL_EXERCISE'"
+                   [class.bi-question-circle]="lesson.type === 'QUIZ'"></i>
+                {{ lesson.type }}
+              </span>
+              <span *ngIf="lesson.duration">{{ lesson.duration }}min</span>
+              <span *ngIf="!lesson.completed && (lesson.progressPercentage || 0) > 0" class="text-warning">{{ lesson.progressPercentage | number:'1.0-0' }} %</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div class="content-area reading-pad" *ngIf="currentLesson" #contentArea (scroll)="onContentScroll(contentArea)">
+      <div class="lesson-head d-flex justify-content-between align-items-start mb-4">
+        <div>
+          <h3 class="fw-bold mb-1">{{ currentLesson.title }}</h3>
+          <p class="text-muted">{{ currentLesson.description }}</p>
+        </div>
+        <!-- Vidéo : validée en la regardant ; document : après un temps de lecture ; texte : en bas de page ou bouton -->
+        <div *ngIf="!currentLesson.completed && isTrackedVideo" class="lesson-watch small text-muted text-nowrap">
+          <i class="bi bi-play-circle me-1"></i>Vue à <strong>{{ lessonPercent }} %</strong> · validée à 90 %
+        </div>
+        <button *ngIf="!currentLesson.completed && !isTrackedVideo" class="btn btn-success btn-sm"
+                (click)="markComplete()" [disabled]="markingComplete || documentWait > 0">
+          <i class="bi bi-check-circle me-1"></i>
+          <ng-container *ngIf="isDocument">J'ai terminé la lecture<span *ngIf="documentWait > 0"> ({{ documentWait }} s)</span></ng-container>
+          <ng-container *ngIf="!isDocument">Marquer comme complété</ng-container>
+        </button>
+        <span *ngIf="currentLesson.completed" class="badge bg-success px-3 py-2">
+          <i class="bi bi-check-circle me-1"></i>Complété ✓
+        </span>
+      </div>
+
+      <!-- VIDEO -->
+      <div *ngIf="currentLesson.type === 'VIDEO'" class="mb-4">
+        <div class="video-container mb-3" *ngIf="currentLesson.videoUrl || !currentLesson.content">
+          <div class="video-placeholder" style="aspect-ratio:16/9">
+            <div class="text-center" *ngIf="!currentLesson.videoUrl">
+              <div style="font-size:4rem">🎬</div>
+              <p class="mt-2 opacity-75">Vidéo non disponible pour cette démo</p>
+              <p class="small opacity-50">URL : {{ currentLesson.videoUrl || 'Non configuré' }}</p>
+            </div>
+            <video *ngIf="currentLesson.videoUrl" #vid [src]="videoSrc" controls preload="metadata" playsinline
+                   class="w-100" style="max-height:400px"
+                   (loadedmetadata)="onVideoMetadata(vid)" (timeupdate)="onVideoTime(vid)"
+                   (seeking)="onVideoBreak(vid)" (pause)="onVideoBreak(vid, true)" (ended)="onVideoBreak(vid, true)">
+              Votre navigateur ne supporte pas la vidéo.
+            </video>
+          </div>
+        </div>
+        <!-- Qualité : légère pour les connexions faibles -->
+        <div *ngIf="currentLesson.videoLightUrl && !playingDownloaded" class="quality-bar d-flex flex-wrap align-items-center gap-2 small">
+          <span class="text-muted">Qualité :</span>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Qualité vidéo">
+            <button type="button" class="btn" [class.btn-primary]="quality === 'auto'" [class.btn-outline-secondary]="quality !== 'auto'" (click)="setQuality('auto')">Auto</button>
+            <button type="button" class="btn" [class.btn-primary]="quality === 'hd'" [class.btn-outline-secondary]="quality !== 'hd'" (click)="setQuality('hd')">Normale</button>
+            <button type="button" class="btn" [class.btn-primary]="quality === 'light'" [class.btn-outline-secondary]="quality !== 'light'" (click)="setQuality('light')">Légère (économie de données)</button>
+          </div>
+        </div>
+        <!-- Avancement de la vidéo -->
+        <div *ngIf="isTrackedVideo" class="mt-2 mb-2">
+          <div class="progress" style="height:6px" role="progressbar" [attr.aria-valuenow]="lessonPercent" aria-valuemin="0" aria-valuemax="100"
+               aria-label="Part de la vidéo regardée">
+            <div class="progress-bar" [class.bg-success]="currentLesson.completed" [style.width.%]="lessonPercent"></div>
+          </div>
+          <div class="small text-muted mt-1">
+            {{ currentLesson.completed ? 'Vidéo terminée.' : 'Regardez au moins 90 % de la vidéo pour valider la leçon (avancer la barre ne compte pas, ni au-delà de ×2).' }}
+          </div>
+        </div>
+        <div *ngIf="playingDownloaded" class="small text-success"><i class="bi bi-phone me-1"></i>Lecture depuis l'appareil (cours téléchargé), sans consommer de données.</div>
+      </div>
+
+      <!-- PDF / Document -->
+      <div *ngIf="currentLesson.type === 'PDF'" class="mb-4">
+        <div class="border rounded-3 p-5 text-center bg-light mb-3" *ngIf="!currentLesson.pdfUrl && !currentLesson.content">
+          <div style="font-size:4rem">📄</div>
+          <p class="mt-2 text-muted">Document non disponible</p>
+        </div>
+        <iframe *ngIf="currentLesson.pdfUrl && isViewableInline(currentLesson.pdfUrl)"
+                [src]="safeDocUrl(currentLesson.pdfUrl)"
+                class="w-100 border rounded-3" style="height:85vh"></iframe>
+        <div *ngIf="currentLesson.pdfUrl && !isViewableInline(currentLesson.pdfUrl)"
+             class="border rounded-3 p-5 text-center bg-light">
+          <div style="font-size:3rem">📝</div>
+          <p class="mt-2 mb-3 text-muted">Ce document (Word) ne peut pas s'afficher directement dans le navigateur.</p>
+          <a [href]="currentLesson.pdfUrl" target="_blank" download class="btn btn-primary-custom">
+            <i class="bi bi-download me-2"></i>Télécharger le document
+          </a>
+        </div>
+      </div>
+
+      <!-- Lesson text content (course material) -->
+      <div *ngIf="currentLesson.content" class="card border-0 bg-light mb-4" style="border-radius:12px">
+        <div class="card-body p-4">
+          <h6 class="fw-bold mb-3"><i class="bi bi-journal-text me-2 text-primary"></i>Support de cours</h6>
+          <div class="lesson-content" style="white-space: pre-wrap; line-height: 1.7;">{{ currentLesson.content }}</div>
+        </div>
+      </div>
+
+      <!-- CODE EXERCISE -->
+      <div *ngIf="currentLesson.type === 'CODE_EXERCISE'" class="mb-4">
+        <div class="alert alert-info d-flex gap-2">
+          <i class="bi bi-code-slash fs-5"></i>
+          <div>
+            <strong>Exercice de code</strong><br>
+            <span class="small">Pratiquez votre code dans l'IDE intégré.</span>
+          </div>
+        </div>
+        <a routerLink="/ide" [queryParams]="{ lessonId: currentLesson.id }" class="btn btn-primary-custom">
+          <i class="bi bi-code-slash me-2"></i>Ouvrir l'IDE
+        </a>
+      </div>
+
+      <!-- EXCEL EXERCISE -->
+      <div *ngIf="currentLesson.type === 'EXCEL_EXERCISE'" class="mb-4">
+        <div class="alert alert-info d-flex gap-2">
+          <i class="bi bi-table fs-5"></i>
+          <div>
+            <strong>Exercice Excel</strong><br>
+            <span class="small">Pratiquez vos calculs comptables dans le tableur intégré (formules type Excel).</span>
+          </div>
+        </div>
+        <a routerLink="/spreadsheet" [queryParams]="{ lessonId: currentLesson.id }" class="btn btn-primary-custom">
+          <i class="bi bi-table me-2"></i>Ouvrir le tableur
+        </a>
+      </div>
+
+      <!-- QUIZ -->
+      <div *ngIf="currentLesson.type === 'QUIZ'" class="mb-4">
+        <div class="alert alert-warning d-flex gap-2">
+          <i class="bi bi-question-circle fs-5"></i>
+          <div><strong>Quiz</strong><br><span class="small">Testez vos connaissances.</span></div>
+        </div>
+        <div class="card border-0 bg-light p-4 rounded-3">
+          <p class="fw-semibold">Question de démonstration :</p>
+          <p>Quelle est la bonne syntaxe pour déclarer une variable en Java ?</p>
+          <div class="d-flex flex-column gap-2 mt-3">
+            <button *ngFor="let opt of quizOptions; let qi = index"
+              class="btn text-start"
+              [class.btn-outline-secondary]="selectedQuiz !== qi"
+              [class.btn-success]="selectedQuiz === qi && qi === 0"
+              [class.btn-danger]="selectedQuiz === qi && qi !== 0"
+              (click)="selectedQuiz = qi">
+              {{ qi+1 }}. {{ opt }}
+            </button>
+          </div>
+          <div *ngIf="selectedQuiz !== null" class="mt-3 alert"
+               [class.alert-success]="selectedQuiz === 0"
+               [class.alert-danger]="selectedQuiz !== 0">
+            {{ selectedQuiz === 0 ? '✅ Correct ! int x = 5; est la bonne syntaxe Java.' : '❌ Incorrect. La bonne réponse est la première option.' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+        <button class="btn btn-outline-secondary" (click)="prevLesson()" [disabled]="isFirstLesson">
+          <i class="bi bi-arrow-left me-2"></i>Précédent
+        </button>
+        <button class="btn btn-primary-custom" (click)="nextLesson()" [disabled]="isLastLesson">
+          Suivant<i class="bi bi-arrow-right ms-2"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- No lesson selected -->
+    <div class="content-area d-flex align-items-center justify-content-center" *ngIf="!currentLesson">
+      <div class="text-center text-muted">
+        <div style="font-size:4rem">👈</div>
+        <p class="mt-2">Sélectionnez une leçon pour commencer</p>
+      </div>
+    </div>
+  </div>
+</div>
