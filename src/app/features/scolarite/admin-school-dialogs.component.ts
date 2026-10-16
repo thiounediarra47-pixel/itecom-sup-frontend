@@ -48,7 +48,7 @@ import { SchoolScheduleComponent, SchoolTranscriptComponent } from './school-sha
           <input id="nsEmail" type="email" class="form-control" name="email" [(ngModel)]="form.email" required
                  [class.is-invalid]="touched.email && emailMsg" (blur)="touched.email = true" placeholder="prenom.nom@gmail.com">
           <div *ngIf="touched.email && emailMsg" class="invalid-feedback d-block">{{ emailMsg }}</div>
-          <div *ngIf="!(touched.email && emailMsg)" class="form-text">Identifiant de connexion : les accès lui sont envoyés à cette adresse.</div>
+          <div *ngIf="!(touched.email && emailMsg)" class="form-text">Identifiant de connexion. Aucun mot de passe n'est envoyé à l'inscription : créez ensuite son compte dans « Étudiants et professeurs ».</div>
         </div>
         <div class="col-md-6">
           <label class="form-label fw-semibold small" for="nsPhone">Téléphone <span class="text-muted fw-normal">(facultatif)</span></label>
@@ -325,12 +325,7 @@ export class EnrollmentDialogComponent implements OnInit {
     this.school.admit(body).subscribe({
       next: r => {
         this.ref.close(true);
-        if (r.emailSent) {
-          this.dialogs.toast(r.message);
-        } else {
-          this.dialogs.alert({ title: 'Étudiant inscrit', icon: 'bi-exclamation-triangle', tone: 'warning',
-            message: `${r.message}\nIdentifiant : ${f.email.trim().toLowerCase()} — mot de passe : ${r.password}` });
-        }
+        this.dialogs.alert({ title: 'Étudiant inscrit', icon: 'bi-person-check', tone: 'success', message: r.message });
       },
       error: err => { this.saving = false; this.error = apiError(err); }
     });

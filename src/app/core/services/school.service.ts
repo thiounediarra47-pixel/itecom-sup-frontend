@@ -42,7 +42,7 @@ export interface EnrollmentFile {
   documents: SchoolDocument[];
 }
 
-export interface Admission { enrollment: Enrollment; emailSent: boolean; message: string; password: string; }
+export interface Admission { enrollment: Enrollment; message: string; }
 
 export interface SheetRow { enrollmentId: number; studentName: string; matricule: string; grade: number | null; comment: string | null; published: boolean; }
 

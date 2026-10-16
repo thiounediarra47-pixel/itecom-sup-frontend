@@ -155,10 +155,16 @@ const NO_SUBJECT = '__none__';
                   <span *ngIf="!subjectList(u.subjects).length" class="text-muted small">—</span>
                 </td>
                 <td>
-                  <span class="status" [class.off]="!u.enabled"><i class="bi bi-circle-fill me-1"></i>{{ u.enabled ? 'Actif' : 'Désactivé' }}</span>
+                  <span *ngIf="isPending(u)" class="status pending"><i class="bi bi-circle-fill me-1"></i>Compte à créer</span>
+                  <span *ngIf="!isPending(u)" class="status" [class.off]="!u.enabled"><i class="bi bi-circle-fill me-1"></i>{{ u.enabled ? 'Actif' : 'Désactivé' }}</span>
                 </td>
                 <td class="text-end">
-                  <button type="button" class="btn btn-sm" [class.btn-outline-danger]="u.enabled" [class.btn-outline-primary]="!u.enabled"
+                  <button *ngIf="isPending(u)" type="button" class="btn btn-sm btn-primary"
+                          [disabled]="processing[u.id]" (click)="createAccount(u)">
+                    <span *ngIf="processing[u.id]" class="spinner-border spinner-border-sm me-1"></span>
+                    <i *ngIf="!processing[u.id]" class="bi bi-key me-1"></i>Créer le compte
+                  </button>
+                  <button *ngIf="!isPending(u)" type="button" class="btn btn-sm" [class.btn-outline-danger]="u.enabled" [class.btn-outline-primary]="!u.enabled"
                           [disabled]="processing[u.id]" (click)="toggleAccount(u)">
                     <span *ngIf="processing[u.id]" class="spinner-border spinner-border-sm me-1"></span>
                     {{ u.enabled ? 'Désactiver' : 'Réactiver' }}
@@ -201,6 +207,7 @@ const NO_SUBJECT = '__none__';
       background: var(--gray-100); border: 1px solid var(--border); color: var(--dark); }
     .status { font-size: .8rem; color: var(--success); }
     .status.off { color: var(--danger); }
+    .status.pending { color: var(--warning, #b7791f); }
     .status i { font-size: .5rem; vertical-align: middle; }
   `]
 })
@@ -316,6 +323,39 @@ export class AdminUsersComponent implements OnInit {
         if (res.emailSent) this.dialogs.toast(res.message);
         else this.dialogs.alert({ title: 'Compte créé', message: res.message, icon: 'bi-envelope-exclamation', tone: 'warning' });
       });
+  }
+
+  /** Étudiant inscrit par la scolarité, sans accès tant que son compte n'est pas créé. */
+  isPending(u: AppUser): boolean {
+    return u.registrationStatus === 'ACCOUNT_PENDING';
+  }
+
+  /** Génère le mot de passe de l'étudiant inscrit, l'envoie par email et active son accès. */
+  async createAccount(u: AppUser) {
+    const ok = await this.dialogs.confirm({
+      title: `Créer le compte de ${u.firstName} ${u.lastName} ?`,
+      message: `Un mot de passe sera généré et envoyé à ${u.email}.`,
+      icon: 'bi-key', confirmText: 'Créer le compte'
+    });
+    if (!ok) return;
+    this.processing[u.id] = true;
+    this.http.post<{ emailSent: boolean; message: string; password: string }>(`/api/admin/users/${u.id}/create-account`, {}).subscribe({
+      next: r => {
+        this.processing[u.id] = false;
+        u.registrationStatus = 'APPROVED';
+        u.enabled = true;
+        if (r.emailSent) {
+          this.dialogs.toast(r.message);
+        } else {
+          this.dialogs.alert({ title: 'Compte créé', icon: 'bi-exclamation-triangle', tone: 'warning',
+            message: `${r.message}\nIdentifiant : ${u.email} — mot de passe : ${r.password}` });
+        }
+      },
+      error: err => {
+        this.processing[u.id] = false;
+        this.dialogs.toast(err.error?.message || 'Action impossible pour le moment.', 'danger');
+      }
+    });
   }
 
   async toggleAccount(u: AppUser) {
