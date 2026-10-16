@@ -51,10 +51,11 @@ export const STUDENT_LEVELS = ['L1', 'L2', 'L3', 'M1', 'M2'];
           <input class="form-control" [(ngModel)]="search" placeholder="Rechercher par nom, prénom ou email"
                  (focus)="searchOpen = true" (blur)="closeSearch()">
         </div>
-        <a href="/api/teacher/exams/student-template" download="modele_etudiants.xlsx"
-           class="btn btn-outline-secondary btn-sm fw-semibold" style="white-space:nowrap">
-          <i class="bi bi-download me-1"></i>Modèle Excel
-        </a>
+        <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold" style="white-space:nowrap"
+                (click)="downloadTemplate()" [disabled]="downloading">
+          <span *ngIf="downloading" class="spinner-border spinner-border-sm me-1"></span>
+          <i *ngIf="!downloading" class="bi bi-download me-1"></i>Modèle Excel
+        </button>
         <button type="button" class="btn btn-outline-primary btn-sm fw-semibold" style="white-space:nowrap"
                 (click)="fileInput.click()" [disabled]="parsing">
           <span *ngIf="parsing" class="spinner-border spinner-border-sm me-1"></span>
@@ -154,6 +155,7 @@ export class StudentPickerComponent implements OnInit {
   search = '';
   searchOpen = false;
   parsing = false;
+  downloading = false;
   error = '';
 
   constructor(private http: HttpClient) {}
@@ -219,6 +221,27 @@ export class StudentPickerComponent implements OnInit {
 
   get unknownStudents(): PickedStudent[] {
     return this.loaded ? this.students.filter(s => s.email.trim() && !this.hasAccount(s)) : [];
+  }
+
+  /** Le modèle est protégé : un simple lien n'enverrait pas le jeton de connexion. */
+  downloadTemplate() {
+    this.downloading = true;
+    this.error = '';
+    this.http.get('/api/teacher/exams/student-template', { responseType: 'blob' }).subscribe({
+      next: blob => {
+        this.downloading = false;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'modele_etudiants.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.downloading = false;
+        this.error = 'Impossible de télécharger le modèle Excel.';
+      }
+    });
   }
 
   /** La liste importée s'ajoute aux étudiants déjà choisis, sans doublon. */
