@@ -319,7 +319,11 @@ export class AdminUsersComponent implements OnInit {
         if (!res) return;
         const user = res.user as AppUser;
         if (user.role === 'ROLE_TEACHER') { this.teachers = [user, ...this.teachers]; this.setTab('teachers'); }
-        else { this.students = [user, ...this.students]; this.setTab('students'); }
+        else {
+          // L'étudiant inscrit est déjà dans la liste : sa ligne est mise à jour
+          this.students = [user, ...this.students.filter(s => s.id !== user.id)];
+          this.setTab('students');
+        }
         if (res.emailSent) this.dialogs.toast(res.message);
         else this.dialogs.alert({ title: 'Compte créé', message: res.message, icon: 'bi-envelope-exclamation', tone: 'warning' });
       });

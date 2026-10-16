@@ -11,6 +11,11 @@ export interface CreatedAccount {
   message: string;
 }
 
+interface EnrolledStudent {
+  id: number; firstName: string; lastName: string; email: string;
+  level: string | null; registrationStatus: string; enabled: boolean;
+}
+
 /** Matières proposées par défaut, complétées par celles déjà attribuées aux professeurs. */
 const DEFAULT_SUBJECTS = [
   'Algorithmique', 'Programmation', 'Bases de données', 'Développement web', 'Génie logiciel', 'Systèmes d\'exploitation',
@@ -33,7 +38,7 @@ const DEFAULT_SUBJECTS = [
           <button type="button" class="role-card" (click)="choose('STUDENT')">
             <span class="role-icon"><i class="bi bi-mortarboard"></i></span>
             <span class="role-title">Étudiant</span>
-            <span class="role-text">Nom, date et lieu de naissance, niveau (L1 à M2) et filière.</span>
+            <span class="role-text">Choix du niveau puis de l'étudiant inscrit : mot de passe généré et envoyé par email.</span>
           </button>
         </div>
         <div class="col-sm-6">
@@ -46,14 +51,70 @@ const DEFAULT_SUBJECTS = [
       </div>
     </div>
 
-    <!-- Étape 2 : formulaire -->
-    <form *ngIf="role" (ngSubmit)="create()" #f="ngForm">
+    <!-- Étape 2 (étudiant) : niveau, puis étudiant inscrit -->
+    <div *ngIf="role === 'STUDENT'">
+      <button type="button" class="btn btn-link px-0 mb-2 text-decoration-none" (click)="role = null; error = ''">
+        <i class="bi bi-arrow-left me-1"></i>Changer de type de compte
+      </button>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="role-icon small-icon"><i class="bi bi-mortarboard"></i></span>
+        <h6 class="fw-bold mb-0">Accès d'un étudiant inscrit</h6>
+      </div>
+      <p class="text-muted small mb-3">Un mot de passe est généré et envoyé à l'email donné lors de l'inscription.</p>
+
+      <div class="small fw-semibold mb-2">Niveau</div>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <button *ngFor="let l of levels" type="button" class="btn btn-sm" style="border-radius:999px;min-width:72px"
+                [class.btn-primary]="pickLevel === l" [class.btn-outline-secondary]="pickLevel !== l" (click)="selectLevel(l)">
+          {{ l }} <span class="ms-1 opacity-75">· {{ levelCount(l) }}</span>
+        </button>
+      </div>
+
+      <ng-container *ngIf="pickLevel">
+        <div class="input-group input-group-sm mb-2">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input class="form-control" [(ngModel)]="pickSearch" placeholder="Rechercher par nom, prénom ou email">
+        </div>
+        <div *ngIf="loadingStudents" class="text-muted small p-2"><span class="spinner-border spinner-border-sm me-2"></span>Chargement…</div>
+        <div *ngIf="!loadingStudents" class="list-group student-list">
+          <button *ngFor="let s of levelStudents" type="button" class="list-group-item list-group-item-action py-2"
+                  [class.active]="picked?.id === s.id" [disabled]="isDisabled(s)" (click)="picked = s; error = ''">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+              <span class="small"><strong>{{ s.lastName }}</strong> {{ s.firstName }}
+                <span class="d-block opacity-75">{{ s.email }}</span></span>
+              <span class="badge" [ngClass]="isPendingStudent(s) ? 'bg-warning text-dark' : isDisabled(s) ? 'bg-secondary' : 'bg-light text-dark border'">
+                {{ isPendingStudent(s) ? 'Compte à créer' : isDisabled(s) ? 'Désactivé' : 'A déjà un accès' }}
+              </span>
+            </div>
+          </button>
+          <div *ngIf="!levelStudents.length" class="list-group-item small text-muted py-3 text-center">
+            Aucun étudiant inscrit en {{ pickLevel }}{{ pickSearch.trim() ? ' pour cette recherche' : '' }}.
+          </div>
+        </div>
+        <div *ngIf="picked && !isPendingStudent(picked)" class="alert alert-info py-2 small mt-2 mb-0">
+          <i class="bi bi-info-circle me-1"></i>{{ picked.firstName }} a déjà un accès : un nouveau mot de passe remplacera l'ancien.
+        </div>
+      </ng-container>
+
+      <div *ngIf="error" class="alert alert-danger py-2 small mt-3 mb-0"><i class="bi bi-exclamation-triangle me-1"></i>{{ error }}</div>
+
+      <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="button" class="btn btn-light" (click)="ref.close()">Annuler</button>
+        <button type="button" class="btn btn-primary fw-semibold" [disabled]="saving || !picked" (click)="createStudentAccess()">
+          <span *ngIf="saving" class="spinner-border spinner-border-sm me-2"></span>
+          <i *ngIf="!saving" class="bi bi-send me-2"></i>Générer et envoyer le mot de passe
+        </button>
+      </div>
+    </div>
+
+    <!-- Étape 2 (professeur) : formulaire -->
+    <form *ngIf="role === 'TEACHER'" (ngSubmit)="create()" #f="ngForm">
       <button type="button" class="btn btn-link px-0 mb-2 text-decoration-none" (click)="role = null; error = ''">
         <i class="bi bi-arrow-left me-1"></i>Changer de type de compte
       </button>
       <div class="d-flex align-items-center gap-2 mb-3">
-        <span class="role-icon small-icon"><i class="bi" [ngClass]="role === 'STUDENT' ? 'bi-mortarboard' : 'bi-person-video3'"></i></span>
-        <h6 class="fw-bold mb-0">Nouveau compte {{ role === 'STUDENT' ? 'étudiant' : 'professeur' }}</h6>
+        <span class="role-icon small-icon"><i class="bi bi-person-video3"></i></span>
+        <h6 class="fw-bold mb-0">Nouveau compte professeur</h6>
       </div>
 
       <div class="row g-3">
@@ -70,32 +131,7 @@ const DEFAULT_SUBJECTS = [
           <input id="accEmail" type="email" class="form-control" name="email" [(ngModel)]="form.email" required email>
         </div>
 
-        <ng-container *ngIf="role === 'STUDENT'">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold small" for="accLevel">Niveau</label>
-            <select id="accLevel" class="form-select" name="level" [(ngModel)]="form.level" required>
-              <option value="" disabled>— Choisir —</option>
-              <option *ngFor="let l of levels" [value]="l">{{ l }}</option>
-            </select>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold small" for="accBirthDate">Date de naissance</label>
-            <input id="accBirthDate" type="date" class="form-control" name="birthDate" [(ngModel)]="form.birthDate" [max]="maxBirthDate" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold small" for="accBirthPlace">Lieu de naissance</label>
-            <input id="accBirthPlace" class="form-control" name="birthPlace" [(ngModel)]="form.birthPlace" placeholder="Ex. Dakar" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold small" for="accSpecialization">Filière <span class="text-muted fw-normal">(facultatif)</span></label>
-            <select id="accSpecialization" class="form-select" name="specialization" [(ngModel)]="form.specialization">
-              <option value="">— Aucune —</option>
-              <option *ngFor="let s of specializations" [value]="s.value">{{ s.label }}</option>
-            </select>
-          </div>
-        </ng-container>
-
-        <div class="col-12" *ngIf="role === 'TEACHER'">
+        <div class="col-12">
           <label class="form-label fw-semibold small" for="accSubjects">Matières enseignées</label>
           <div class="input-group">
             <select id="accSubjects" class="form-select" name="subjectChoice" [(ngModel)]="subjectChoice" (ngModelChange)="onSubjectChosen()">
@@ -136,7 +172,7 @@ const DEFAULT_SUBJECTS = [
 
       <div class="d-flex justify-content-end gap-2 mt-4">
         <button type="button" class="btn btn-light" (click)="ref.close()">Annuler</button>
-        <button type="submit" class="btn btn-primary fw-semibold" [disabled]="saving || f.invalid || (role === 'TEACHER' && !selectedSubjects.length)">
+        <button type="submit" class="btn btn-primary fw-semibold" [disabled]="saving || f.invalid || !selectedSubjects.length">
           <span *ngIf="saving" class="spinner-border spinner-border-sm me-2"></span>
           <i *ngIf="!saving" class="bi bi-send me-2"></i>Créer et envoyer les identifiants
         </button>
@@ -162,6 +198,7 @@ const DEFAULT_SUBJECTS = [
       background: var(--primary-soft); color: var(--primary); font-size: .85rem; font-weight: 600;
     }
     .btn-close-sm { width: .5em; height: .5em; padding: .25em; }
+    .student-list { max-height: 300px; overflow: auto; }
   `]
 })
 export class CreateAccountDialogComponent implements OnInit {
@@ -177,14 +214,13 @@ export class CreateAccountDialogComponent implements OnInit {
   form = this.empty();
 
   readonly levels = ['L1', 'L2', 'L3', 'M1', 'M2'];
-  // Seule limite : pas de date dans le futur
-  readonly maxBirthDate = new Date().toISOString().substring(0, 10);
-  readonly specializations = [
-    { value: 'genie-logiciel', label: 'Génie Logiciel' }, { value: 'reseau', label: 'Réseaux' },
-    { value: 'comptabilite', label: 'Comptabilité' }, { value: 'sante', label: 'Santé' },
-    { value: 'marketing-digital', label: 'Marketing Digital' },
-    { value: 'developpement-personnel', label: 'Développement Personnel' }
-  ];
+
+  // Accès étudiant : choix d'un étudiant inscrit
+  students: EnrolledStudent[] = [];
+  loadingStudents = false;
+  pickLevel = '';
+  pickSearch = '';
+  picked: EnrolledStudent | null = null;
 
   constructor(private http: HttpClient, public ref: DialogRef<CreatedAccount>) {}
 
@@ -223,12 +259,58 @@ export class CreateAccountDialogComponent implements OnInit {
   }
 
   private empty() {
-    return { firstName: '', lastName: '', email: '', level: '', birthDate: '', birthPlace: '', specialization: '', password: this.generatePassword() };
+    return { firstName: '', lastName: '', email: '', password: this.generatePassword() };
   }
 
   choose(role: 'STUDENT' | 'TEACHER') {
     this.role = role;
     this.error = '';
+    if (role === 'STUDENT' && !this.students.length) {
+      this.loadingStudents = true;
+      this.http.get<EnrolledStudent[]>('/api/admin/users/students').subscribe({
+        next: list => { this.students = list; this.loadingStudents = false; },
+        error: () => { this.loadingStudents = false; this.error = 'Impossible de charger la liste des étudiants.'; }
+      });
+    }
+  }
+
+  selectLevel(level: string) {
+    this.pickLevel = level;
+    this.picked = null;
+    this.error = '';
+  }
+
+  levelCount(level: string): number {
+    return this.students.filter(s => s.level === level).length;
+  }
+
+  isPendingStudent(s: EnrolledStudent): boolean {
+    return s.registrationStatus === 'ACCOUNT_PENDING';
+  }
+
+  /** Compte désactivé par l'admin : à réactiver avant de lui envoyer un mot de passe. */
+  isDisabled(s: EnrolledStudent): boolean {
+    return !this.isPendingStudent(s) && !s.enabled;
+  }
+
+  /** Étudiants du niveau choisi, ceux dont le compte reste à créer en premier. */
+  get levelStudents(): EnrolledStudent[] {
+    const q = this.pickSearch.trim().toLowerCase();
+    return this.students
+      .filter(s => s.level === this.pickLevel)
+      .filter(s => !q || `${s.lastName} ${s.firstName} ${s.email}`.toLowerCase().includes(q))
+      .sort((a, b) => Number(this.isPendingStudent(b)) - Number(this.isPendingStudent(a))
+        || `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, 'fr'));
+  }
+
+  createStudentAccess() {
+    if (this.saving || !this.picked) return;
+    this.saving = true;
+    this.error = '';
+    this.http.post<CreatedAccount>(`/api/admin/users/${this.picked.id}/create-account`, {}).subscribe({
+      next: res => { this.saving = false; this.ref.close(res); },
+      error: err => { this.saving = false; this.error = err.error?.message || 'Impossible de créer le compte.'; }
+    });
   }
 
   generatePassword(): string {
@@ -243,15 +325,10 @@ export class CreateAccountDialogComponent implements OnInit {
     if (invalidEmail) { this.error = invalidEmail; return; }
     this.saving = true;
     this.error = '';
-    const student = this.role === 'STUDENT';
     const body = {
-      role: this.role,
+      role: 'TEACHER',
       firstName: this.form.firstName, lastName: this.form.lastName, email: this.form.email, password: this.form.password,
-      specialization: student ? this.form.specialization : '',
-      birthDate: student ? this.form.birthDate : '',
-      birthPlace: student ? this.form.birthPlace : '',
-      level: student ? this.form.level : '',
-      subjects: student ? '' : this.selectedSubjects.join(', ')
+      subjects: this.selectedSubjects.join(', ')
     };
     this.http.post<CreatedAccount>('/api/admin/users', body).subscribe({
       next: res => { this.saving = false; this.ref.close(res); },
