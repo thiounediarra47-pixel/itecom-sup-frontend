@@ -122,7 +122,7 @@ const NO_SUBJECT = '__none__';
       </div>
 
       <!-- Groupes -->
-      <div *ngFor="let g of visibleGroups" class="card mb-3 group-card">
+      <div *ngFor="let g of visibleGroups; trackBy: trackGroup" class="card mb-3 group-card">
         <button type="button" class="group-head" (click)="toggleGroup(g.key)" [attr.aria-expanded]="!collapsed[g.key]">
           <i class="bi" [ngClass]="collapsed[g.key] ? 'bi-chevron-right' : 'bi-chevron-down'"></i>
           <span class="group-title">{{ g.label }}</span>
@@ -140,7 +140,7 @@ const NO_SUBJECT = '__none__';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let u of g.users | paginate: userPages.get(g.key).page : userPages.get(g.key).size">
+              <tr *ngFor="let u of g.users | paginate: userPages.get(g.key).page : userPages.get(g.key).size; trackBy: trackUser">
                 <td>
                   <div class="d-flex align-items-center gap-2">
                     <span class="avatar">{{ u.firstName.charAt(0) }}{{ u.lastName.charAt(0) }}</span>
@@ -197,16 +197,17 @@ const NO_SUBJECT = '__none__';
     .group-title { font-weight: 700; font-size: 1rem; color: var(--dark); }
     .group-count { margin-left: auto; color: var(--muted); font-size: .85rem; }
     .members-table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: var(--surface); white-space: nowrap; }
-    .members-table { table-layout: fixed; min-width: 860px; }
+    .members-table { table-layout: fixed; min-width: 1000px; }
     .members-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .members-table.teachers td:nth-child(3) { white-space: normal; }
     /* Colonnes identiques d'un groupe à l'autre */
-    .members-table.students th:nth-child(1) { width: 26%; } .members-table.students th:nth-child(2) { width: 24%; }
-    .members-table.students th:nth-child(3) { width: 20%; } .members-table.students th:nth-child(4) { width: 13%; }
-    .members-table.students th:nth-child(5) { width: 9%; }  .members-table.students th:nth-child(6) { width: 8%; }
-    .members-table.teachers th:nth-child(1) { width: 26%; } .members-table.teachers th:nth-child(2) { width: 24%; }
-    .members-table.teachers th:nth-child(3) { width: 33%; } .members-table.teachers th:nth-child(4) { width: 9%; }
-    .members-table.teachers th:nth-child(5) { width: 8%; }
+    /* Colonne Action : largeur fixe pour Désactiver / Réactiver / Créer le compte, Modifier et Supprimer */
+    .members-table.students th:nth-child(1) { width: 22%; } .members-table.students th:nth-child(2) { width: 24%; }
+    .members-table.students th:nth-child(3) { width: 16%; } .members-table.students th:nth-child(4) { width: 13%; }
+    .members-table.students th:nth-child(5) { width: 12%; } .members-table.students th:nth-child(6) { width: 230px; }
+    .members-table.teachers th:nth-child(1) { width: 22%; } .members-table.teachers th:nth-child(2) { width: 24%; }
+    .members-table.teachers th:nth-child(3) { width: 30%; } .members-table.teachers th:nth-child(4) { width: 12%; }
+    .members-table.teachers th:nth-child(5) { width: 230px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--dark); color: #fff; font-size: .75rem; font-weight: 700;
       display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .subject-tag { display: inline-block; margin: 2px 4px 2px 0; padding: 2px 8px; border-radius: 6px; font-size: .75rem;
@@ -268,6 +269,11 @@ export class AdminUsersComponent implements OnInit {
       ? this.groupStudents(this.students.filter(matches))
       : this.groupTeachers(this.teachers.filter(matches));
   }
+
+  // Les groupes sont recalculés à chaque affichage : sans suivi par clé, les lignes (et leurs boutons)
+  // seraient recréées entre l'appui et le relâchement de la souris, et le clic serait perdu.
+  readonly trackGroup = (_: number, g: UserGroup) => g.key;
+  readonly trackUser = (_: number, u: AppUser) => u.id;
 
   get visibleGroups(): UserGroup[] {
     return this.allGroups.filter(g => !this.groupFilter || g.key === this.groupFilter);
