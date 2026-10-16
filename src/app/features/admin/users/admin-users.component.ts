@@ -318,7 +318,15 @@ export class AdminUsersComponent implements OnInit {
       });
   }
 
-  toggleAccount(u: AppUser) {
+  async toggleAccount(u: AppUser) {
+    if (u.enabled) {
+      const ok = await this.dialogs.confirm({
+        title: `Désactiver le compte de ${u.firstName} ${u.lastName} ?`,
+        message: 'La personne sera déconnectée et ne pourra plus se connecter tant que le compte ne sera pas réactivé.',
+        icon: 'bi-person-slash', tone: 'danger', confirmText: 'Désactiver'
+      });
+      if (!ok) return;
+    }
     this.processing[u.id] = true;
     const action = u.enabled ? 'disable' : 'enable';
     this.http.post(`/api/admin/users/${u.id}/${action}`, {}).subscribe({

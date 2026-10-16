@@ -1,5 +1,6 @@
 import { Injectable, InjectionToken, Type } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { NavigationStart, Router } from '@angular/router';
+import { BehaviorSubject, filter } from 'rxjs';
 
 /** Données transmises à un écran ouvert dans une popup (ex. identifiant du devoir à modifier). */
 export const DIALOG_DATA = new InjectionToken<any>('DIALOG_DATA');
@@ -67,6 +68,14 @@ export class DialogService {
   readonly dialogs$ = new BehaviorSubject<DialogState[]>([]);
   readonly toasts$ = new BehaviorSubject<Toast[]>([]);
   private nextId = 1;
+
+  constructor(router: Router) {
+    // Le menu latéral reste cliquable pendant qu'une popup est ouverte : changer de page la ferme
+    const path = (url: string) => url.split(/[?#]/)[0];
+    router.events.pipe(filter((e): e is NavigationStart => e instanceof NavigationStart)).subscribe(e => {
+      if (path(e.url) !== path(router.url)) this.dialogs$.value.forEach(d => d.ref.close());
+    });
+  }
 
   confirm(options: DialogOptions): Promise<boolean> {
     const ref = this.push('confirm', { tone: 'primary', confirmText: 'Confirmer', cancelText: 'Annuler', ...options });

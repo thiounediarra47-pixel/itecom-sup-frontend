@@ -195,6 +195,17 @@ body {
   body.sidebar-collapsed .app-header { left: var(--sidebar-collapsed-width); }
 }
 
+/* Popups (bureau) : elles s'ouvrent à droite du menu latéral, sans le recouvrir.
+   !important : l'emporte sur le « inset: 0 » des styles propres à chaque composant. */
+@media (min-width: 768px) {
+  body:has(app-sidebar) :is(.dlg-backdrop, .modal, .modal-backdrop, .modal-overlay, .modal-backdrop-custom) {
+    left: var(--sidebar-width) !important; right: 0 !important; width: auto !important;
+  }
+  body.sidebar-collapsed:has(app-sidebar) :is(.dlg-backdrop, .modal, .modal-backdrop, .modal-overlay, .modal-backdrop-custom) {
+    left: var(--sidebar-collapsed-width) !important;
+  }
+}
+
 .main-content {
   margin-left: var(--sidebar-width);
   margin-top: var(--navbar-height);
