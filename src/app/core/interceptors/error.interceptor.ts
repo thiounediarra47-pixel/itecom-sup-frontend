@@ -43,7 +43,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         router.navigate(['/auth/login'], {
           queryParams: { returnUrl: router.url }
         });
-      } else if (!req.context.get(SILENT_ERRORS)) {
+      } else if (!req.context.get(SILENT_ERRORS)
+                 // Connexion et lien d'examen affichent eux-mêmes le message du serveur (ex. compte désactivé)
+                 && !req.url.includes('/api/auth/') && !req.url.includes('/api/exam/access/')) {
         // Les erreurs 400/404/409 sont affichées par les formulaires eux-mêmes ;
         // les autres échouaient souvent sans aucun message (page vide).
         const message = globalErrorMessage(error);

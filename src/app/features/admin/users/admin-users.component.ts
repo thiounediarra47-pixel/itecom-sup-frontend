@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DialogService } from '../../../core/services/dialog.service';
 import { CreateAccountDialogComponent, CreatedAccount } from './create-account-dialog.component';
+import { EditAccountDialogComponent } from './edit-account-dialog.component';
 
 interface AppUser {
   id: number;
@@ -23,6 +24,7 @@ interface AppUser {
   birthPlace?: string | null;
   level?: string | null;
   subjects?: string | null;
+  phone?: string | null;
 }
 
 interface UserGroup {
@@ -169,6 +171,10 @@ const NO_SUBJECT = '__none__';
                     <span *ngIf="processing[u.id]" class="spinner-border spinner-border-sm me-1"></span>
                     {{ u.enabled ? 'Désactiver' : 'Réactiver' }}
                   </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Modifier" aria-label="Modifier"
+                          [disabled]="processing[u.id]" (click)="editAccount(u)"><i class="bi bi-pencil"></i></button>
+                  <button type="button" class="btn btn-sm btn-outline-danger ms-1" title="Supprimer" aria-label="Supprimer"
+                          [disabled]="processing[u.id]" (click)="deleteAccount(u)"><i class="bi bi-trash3"></i></button>
                 </td>
               </tr>
             </tbody>
@@ -327,6 +333,39 @@ export class AdminUsersComponent implements OnInit {
         if (res.emailSent) this.dialogs.toast(res.message);
         else this.dialogs.alert({ title: 'Compte créé', message: res.message, icon: 'bi-envelope-exclamation', tone: 'warning' });
       });
+  }
+
+  editAccount(u: AppUser) {
+    const teacher = u.role === 'ROLE_TEACHER';
+    this.dialogs.open<AppUser>(EditAccountDialogComponent, {
+      title: `Modifier ${teacher ? 'le professeur' : "l'étudiant"} ${u.firstName} ${u.lastName}`,
+      icon: 'bi-pencil', size: 'md', data: u
+    }).afterClosed.then(updated => {
+      if (!updated) return;
+      const replace = (list: AppUser[]) => list.map(x => x.id === updated.id ? updated : x);
+      if (teacher) this.teachers = replace(this.teachers); else this.students = replace(this.students);
+      this.dialogs.toast('Compte modifié');
+    });
+  }
+
+  async deleteAccount(u: AppUser) {
+    const ok = await this.dialogs.confirmDelete(`le compte de ${u.firstName} ${u.lastName}`,
+      'Cette action est définitive. Un compte qui a un historique (résultats, paiements, cours) ne peut pas être supprimé : désactivez-le plutôt.');
+    if (!ok) return;
+    this.processing[u.id] = true;
+    this.http.delete(`/api/admin/users/${u.id}`).subscribe({
+      next: () => {
+        this.processing[u.id] = false;
+        this.students = this.students.filter(x => x.id !== u.id);
+        this.teachers = this.teachers.filter(x => x.id !== u.id);
+        this.dialogs.toast('Compte supprimé');
+      },
+      error: err => {
+        this.processing[u.id] = false;
+        this.dialogs.alert({ title: 'Suppression impossible', message: err.error?.message || 'Action impossible pour le moment.',
+          icon: 'bi-exclamation-triangle', tone: 'warning' });
+      }
+    });
   }
 
   /** Étudiant inscrit par la scolarité, sans accès tant que son compte n'est pas créé. */
